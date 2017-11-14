@@ -22,6 +22,8 @@ class DbConnect {
 
         // Connecting to mysql database
         $this->conn = new mysqli(DB_HOST, DB_USERNAME, DB_PASSWORD, DB_NAME);
+        $stmt = $this->conn->prepare("set names utf8");
+        $stmt->execute();
 
         // Check for database connection error
         if (mysqli_connect_errno()) {

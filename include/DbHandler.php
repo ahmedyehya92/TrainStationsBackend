@@ -26,21 +26,23 @@ class DbHandler {
      * @param String $email User login email id
      * @param String $password User login password
      */
-    public function createUser($name, $email, $password) {
+    public function createUser($name, $email, $password, $profile_pic, $device) {
         require_once 'PassHash.php';
+        require_once 'DecodeImage.php';
         $response = array();
 
         // First check if user already existed in db
         if (!$this->isUserExists($email)) {
             // Generating password hash
             $password_hash = PassHash::hash($password);
+            $profil_pic_url = DecodeImage::upload($profile_pic);
 
             // Generating API key
             $api_key = $this->generateApiKey();
 
             // insert query
-            $stmt = $this->conn->prepare("INSERT INTO users(name, email, password_hash, api_key, status) values(?, ?, ?, ?, 1)");
-            $stmt->bind_param("ssss", $name, $email, $password_hash, $api_key);
+            $stmt = $this->conn->prepare("INSERT INTO users(name, email, password_hash, profile_picture, api_key, device, status) values(?, ?, ?, ?, ?, ?, 1)");
+            $stmt->bind_param("ssssss", $name, $email, $password_hash, $profil_pic_url, $api_key, $device);
 
             $result = $stmt->execute();
 
