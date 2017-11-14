@@ -35,14 +35,18 @@ class DbHandler {
         if (!$this->isUserExists($email)) {
             // Generating password hash
             $password_hash = PassHash::hash($password);
-            $profil_pic_url = DecodeImage::upload($profile_pic);
+            $profile_pic_url = NULL;
+            if ($profile_pic != NULL)
+            {
+            $profile_pic_url = DecodeImage::upload($profile_pic);
+            }
 
             // Generating API key
             $api_key = $this->generateApiKey();
 
             // insert query
             $stmt = $this->conn->prepare("INSERT INTO users(name, email, password_hash, profile_picture, api_key, device, status) values(?, ?, ?, ?, ?, ?, 1)");
-            $stmt->bind_param("ssssss", $name, $email, $password_hash, $profil_pic_url, $api_key, $device);
+            $stmt->bind_param("ssssss", $name, $email, $password_hash, $profile_pic_url, $api_key, $device);
 
             $result = $stmt->execute();
 
@@ -64,6 +68,38 @@ class DbHandler {
         return $response;
     }
 
+    
+    public function addProfilePic($email, $image) {
+        
+        require_once 'DecodeImage.php';
+        $profile_pic_url = NULL;
+        
+        if ($image != NULL)
+            {
+            $profile_pic_url = DecodeImage::upload($image);
+            }
+        
+            if ($profile_pic_url != FALSE)
+            {
+                $stmt = $this->conn->prepare("UPDATE users SET profile_picture=? WHERE email=?");
+                $stmt->bind_param("ss", $profile_pic_url, $email);
+                $result = $stmt->execute();
+                $stmt->close();
+
+                if ($result) {
+                
+                    return TRUE;
+                } else {
+                
+                    return FALSE;
+                 }
+           
+            } else {
+               return FALSE;
+           }
+        
+    }
+    
     /**
      * Checking user login
      * @param String $email User login email id
@@ -211,7 +247,62 @@ class DbHandler {
      * @param String $user_id user id to whom task belongs to
      * @param String $task task text
      */
-    public function createTask($user_id, $task) {
+    
+    public function trainBy2Stations ($departure_station_id, $arrival_station_id, $class_id )
+    {
+        $stmt1 = $this->conn->prepare("SET @start = ?, @finish = ?, @class = ?;");
+        $stmt1->bind_param("iii", $departure_station_id, $arrival_station_id, $class_id);
+        $stmt1->execute();
+        
+        $stmt = $this->conn->prepare("
+          (SELECT trains.train_id, trains.train_num, classes.class_name, stations_train.arrival 
+	FROM trains JOIN classes ON classes.class_id = trains.class JOIN stations_train ON trains.train_id = stations_train.train 
+    WHERE @start<@finish AND @class = 0 AND trains.direction =1 AND stations_train.station IN(@start,@finish) 
+    GROUP BY stations_train.train HAVING COUNT(*) =2)
+    
+    UNION
+    
+    (SELECT trains.train_id, trains.train_num, classes.class_name, stations_train.arrival
+	FROM trains JOIN classes ON classes.class_id = trains.class JOIN stations_train ON trains.train_id = stations_train.train 
+    WHERE @start>@finish AND @class = 0 AND trains.direction =0 AND stations_train.station IN(@start,@finish) 
+    GROUP BY stations_train.train HAVING COUNT(*) =2)
+    
+    UNION
+    
+    (SELECT trains.train_id, trains.train_num, classes.class_name, stations_train.arrival 
+	FROM trains JOIN classes ON classes.class_id = trains.class JOIN stations_train ON trains.train_id = stations_train.train 
+    WHERE @start<@finish AND @class != 0 AND trains.class = @class AND trains.direction =1 AND stations_train.station IN(@start,@finish) 
+    GROUP BY stations_train.train HAVING COUNT(*) =2)
+
+    UNION
+
+    (SELECT trains.train_id, trains.train_num, classes.class_name, stations_train.arrival 
+	FROM trains JOIN classes ON classes.class_id = trains.class JOIN stations_train ON trains.train_id = stations_train.train 
+    WHERE @start>@finish AND @class != 0 AND trains.class = @class AND trains.direction =0 AND stations_train.station IN(@start,@finish) 
+    GROUP BY stations_train.train HAVING COUNT(*) =2)");
+        
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+        return $result;
+    }
+
+
+
+    public function stationsByTrain($train_id)
+    {
+        $stmt = $this->conn->prepare("SELECT stations.station_name, stations_train.arrival 
+    FROM stations_train JOIN stations ON stations.station_id = stations_train.station 
+    WHERE stations_train.train = ?");
+        $stmt->bind_param("i", $train_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+        return $result;
+    }
+
+        public function createTask($user_id, $task) {
         $stmt = $this->conn->prepare("INSERT INTO tasks(task) VALUES(?)");
         $stmt->bind_param("s", $task);
         $result = $stmt->execute();

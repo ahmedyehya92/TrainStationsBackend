@@ -67,12 +67,14 @@ $app->post('/register', function() use ($app) {
             $name = $app->request->post('name');
             $email = $app->request->post('email');
             $password = $app->request->post('password');
+            $profile_pic = $app->request->post('profile_pic');
+            $device = $app->request->post('device');
 
             // validating email address
             validateEmail($email);
 
             $db = new DbHandler();
-            $res = $db->createUser($name, $email, $password);
+            $res = $db->createUser($name, $email, $password, $profile_pic, $device);
 
             if ($res == USER_CREATED_SUCCESSFULLY) {
                 $response["error"] = false;
@@ -128,6 +130,31 @@ $app->post('/login', function() use ($app) {
 
             echoRespnse(200, $response);
         });
+        
+        
+$app->post('/upprofilepic', 'authenticate', function () use ($app){
+    
+    verifyRequiredParams(array('email','profile_pic'));
+    
+    $email = $app->request()->post('email');
+    $profilePic = $app->request()->post('profile_pic');
+    
+    $response = array();
+    
+    $db = new DbHandler();
+    
+    $result = $db->addProfilePic($email, $profilePic);
+    
+    if ($result == TRUE)
+    {
+        $response["error"] = false;
+    }
+ else {
+        $response["error"] = true;
+    }
+    
+    echoRespnse(200, $response);
+});        
 
 /*
  * ------------------------ METHODS WITH AUTHENTICATION ------------------------
@@ -138,6 +165,71 @@ $app->post('/login', function() use ($app) {
  * method GET
  * url /tasks          
  */
+
+
+$app->post('/gettrainsBy2stations','authenticate', function() use ($app) {
+    
+    global $departure_station_id;
+    global $arrival_station_id;
+    global $class_id;
+    
+    $db = new DbHandler();
+    
+    $departure_station_id = $app->request->post('departure_station_id');
+    $arrival_station_id = $app->request->post('arrival_station_id');
+    $class_id = $app->request->post('class_id');
+    
+    $response = array();
+    
+    $result = $db->trainBy2Stations($departure_station_id, $arrival_station_id, $class_id);
+    
+    $response["error"] = false;
+    $response["trains"] = array();
+    
+    while ($train = $result->fetch_assoc()) {
+        
+        $tmp = array();
+        $tmp["train_id"] = $train["train_id"];
+        $tmp["train_num"] = $train["train_num"];
+        $tmp["class_name"] = $train["class_name"];
+        $tmp["arrival"] = $train["arrival"];
+        
+        array_push($response["trains"], $tmp);
+    }
+    
+    echoRespnse(200, $response);
+    
+});
+
+$app->post('/getStationsByTrain','authenticate', function() use ($app) {
+   
+    global $train_id;
+    
+    $db = new DbHandler();
+    
+    $train_id = $app->request->post('train_id');
+    
+    $response = array();
+    
+    $result = $db->stationsByTrain($train_id); 
+    $response["error"] = false;
+    $response["stations"] = array();
+    
+    while ($station = $result->fetch_assoc()) {
+        
+        $tmp = array();
+        $tmp["station_name"] = $station["station_name"];
+        $tmp["arrival"] = $station["arrival"];
+        
+        array_push($response["stations"], $tmp);
+    }
+    
+    echoRespnse(200, $response);
+    
+});
+
+
+
 $app->get('/tasks', 'authenticate', function() {
             global $user_id;
             $response = array();
