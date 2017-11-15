@@ -76,15 +76,18 @@ $app->post('/register', function() use ($app) {
             $db = new DbHandler();
             $res = $db->createUser($name, $email, $password, $profile_pic, $device);
 
-            if ($res == USER_CREATED_SUCCESSFULLY) {
-                $response["error"] = false;
-                $response["message"] = "You are successfully registered";
-            } else if ($res == USER_CREATE_FAILED) {
+            if ($res == USER_CREATE_FAILED) {
                 $response["error"] = true;
                 $response["message"] = "Oops! An error occurred while registereing";
             } else if ($res == USER_ALREADY_EXISTED) {
                 $response["error"] = true;
                 $response["message"] = "Sorry, this email already existed";
+            } else {
+                $response["error"] = false;
+                $response["apiKey"] = $res["api_key"];
+                $response["user"]["id"] = $res["id"];
+                $response["user"]["name"] = $res["name"];
+                $response["user"]["email"] = $res["email"];
             }
             // echo json response
             echoRespnse(201, $response);
@@ -156,6 +159,35 @@ $app->post('/upprofilepic', 'authenticate', function () use ($app){
     echoRespnse(200, $response);
 });        
 
+
+
+$app->post('/updatetoken', 'authenticate', function() use ($app) {
+           
+            global $token;
+            
+
+
+            $response = array();
+            
+            $token = $app->request->post('token');
+            $email = $app->request->post('email');
+            
+            
+            $db = new DbHandler();
+            $result = $db->updateToken($token,$email);
+           
+            if ($result != NULL)
+            {
+                $response["error"] = false;
+                $response["status"] = "done";
+            }
+              
+            else {
+                 $response["error"] = true;
+                $response["status"] = "there is some wrong";
+            }
+            echoRespnse(200, $response);
+        });
 /*
  * ------------------------ METHODS WITH AUTHENTICATION ------------------------
  */

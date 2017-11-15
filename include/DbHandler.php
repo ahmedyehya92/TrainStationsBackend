@@ -55,7 +55,14 @@ class DbHandler {
             // Check for successful insertion
             if ($result) {
                 // User successfully inserted
-                return USER_CREATED_SUCCESSFULLY;
+                
+                $stmt = $this->conn->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+ 
+            return $user;
             } else {
                 // Failed to create user
                 return USER_CREATE_FAILED;
@@ -98,6 +105,24 @@ class DbHandler {
                return FALSE;
            }
         
+    }
+    
+    
+    public function updateToken($token, $email) {
+        
+       
+            // insert query
+       
+            $stmt = $this->conn->prepare("UPDATE users SET token = ? WHERE email = ?");
+            $stmt->bind_param("ss", $token, $email);
+
+            $result = $stmt->execute();
+
+            $stmt->close();
+        
+ 
+ 
+        return $result;
     }
     
     /**
