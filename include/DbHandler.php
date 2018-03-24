@@ -265,6 +265,66 @@ class DbHandler {
         return md5(uniqid(rand(), true));
     }
 
+    /*-------------- following table methods---------------- */
+    
+    
+    public function  isFollowed ($user_id, $chat_room_id)
+    {
+                $stmt = $this->conn->prepare("SELECT following.user_id FROM following WHERE following.user_id = ? AND following.chat_room_id = ?");
+                $stmt->bind_param("ii", $user_id, $chat_room_id);
+                if ($stmt->execute()) 
+                {
+                    
+                    $stmt->bind_result($userid);
+            $stmt->fetch();
+            $isFollwed = array();
+            $isFollwed["user_id"] = $userid;
+           
+                   $stmt->close();
+                   return $isFollwed;
+                }
+                else {
+            return NULL;
+        }
+                
+                
+    }
+    
+    
+    public function addUserFollow($user_id, $chatroom_id) {
+            
+            $stmtp = $this->conn->prepare("INSERT INTO following (user_id,chat_room_id) VALUES (?,?)");
+            $stmtp->bind_param("ii", $user_id, $chatroom_id);
+
+            $result = $stmtp->execute();
+
+            $stmtp->close();
+            if ($result) {
+                
+                return "done";
+            } else {
+                
+                return NULL;
+            }
+    }
+    
+    public function deleteUserFollow($user_id, $chat_room_id) {
+            
+            $stmtp = $this->conn->prepare("DELETE FROM following WHERE user_id=? AND chat_room_id=?");
+            $stmtp->bind_param("ii", $user_id, $chat_room_id);
+
+            $result = $stmtp->execute();
+
+            $stmtp->close();
+            if ($result) {
+                
+                return "done";
+            } else {
+                
+                return NULL;
+            }
+    }
+    
     /* ------------- `tasks` table method ------------------ */
 
     /**
@@ -272,6 +332,45 @@ class DbHandler {
      * @param String $user_id user id to whom task belongs to
      * @param String $task task text
      */
+    
+    
+    /* ------------- messages table methods --------------- */
+    
+    // messaging in a chat room / to persional message
+    public function addMessage($user_id, $chat_room_id, $message) {
+        $response = array();
+ 
+        $stmt = $this->conn->prepare("INSERT INTO messages (chat_room_id, user_id, message) values(?, ?, ?)");
+        $stmt->bind_param("iis", $chat_room_id, $user_id, $message);
+ 
+        $result = $stmt->execute();
+ 
+        if ($result) {
+            $response['error'] = false;
+ 
+            // get the message
+            $message_id = $this->conn->insert_id;
+            $stmt = $this->conn->prepare("SELECT message_id, user_id, chat_room_id, message, created_at FROM messages WHERE message_id = ?");
+            $stmt->bind_param("i", $message_id);
+            if ($stmt->execute()) {
+                $stmt->bind_result($message_id, $user_id, $chat_room_id, $message, $created_at);
+                $stmt->fetch();
+                $tmp = array();
+                $tmp['message_id'] = $message_id;
+                $tmp['chat_room_id'] = $chat_room_id;
+                $tmp['message'] = $message;
+                $tmp['created_at'] = $created_at;
+                $response['message'] = $tmp;
+            }
+        } else {
+            $response['error'] = true;
+            $response['message'] = 'Failed send message';
+        }
+ 
+        return $response;
+    }
+    
+    
     
     public function trainBy2Stations ($departure_station_id, $arrival_station_id, $class_id )
     {

@@ -240,8 +240,26 @@ $app->post('/getStationsByTrain','authenticate', function() use ($app) {
     $db = new DbHandler();
     
     $train_id = $app->request->post('train_id');
+    $user_id = $app->request->post('user_id');
     
     $response = array();
+    
+    $db2 = new DbHandler();
+            $result2 = $db2->isFollowed($user_id, $train_id);
+            
+            if ($result2 != NULL)
+            {
+                if ($result2['user_id'] != [])
+                {
+                    
+                    $response["isFollowed"] = true;
+                   
+                    
+                }
+                else {
+                $response["isFollowed"] = false;
+                }
+            }
     
     $result = $db->stationsByTrain($train_id); 
     $response["error"] = false;
@@ -260,7 +278,43 @@ $app->post('/getStationsByTrain','authenticate', function() use ($app) {
     
 });
 
+$app->post('/followaction', 'authenticate', function() use ($app){
+            global $user_id;
+            global $chat_room_id;
+            $response = array();
+            $user_id = $app->request->post('user_id');
+            $chat_room_id = $app->request->post('chat_room_id');
+            $db = new DbHandler();
+            $result = $db->isFollowed($user_id, $chat_room_id);
 
+            if($result != NULL)
+            {
+                $response["error"] = false;
+               if ($result['user_id'] != [])
+                {
+                    
+                    
+                    $result3 = $db->deleteUserFollow($user_id, $chat_room_id);
+                    $response["isFollowed"] = false;
+                    
+                    
+                }
+                else {
+                   
+                $result3 = $db->addUserFollow($user_id, $chat_room_id);
+                $response["isFollowed"] = true; 
+                } 
+            }
+              
+            else {
+                 $response["error"] = true;
+            }
+            
+            
+
+         
+            echoRespnse(200, $response);
+        });
 
 $app->get('/tasks', 'authenticate', function() {
             global $user_id;
